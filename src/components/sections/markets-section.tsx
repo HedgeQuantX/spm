@@ -18,7 +18,7 @@ export function MarketsSection({ onSelectMarket }: MarketsSectionProps) {
     sortBy: 'trending',
   });
 
-  const { markets, allMarkets, loading } = useMarkets(filter);
+  const { markets, allMarkets, loading, error } = useMarkets(filter);
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -30,6 +30,13 @@ export function MarketsSection({ onSelectMarket }: MarketsSectionProps) {
           totalCount={allMarkets.length}
         />
       </div>
+
+      {/* Error display */}
+      {error && (
+        <div className="shrink-0 mx-3 sm:mx-4 mt-2 px-3 py-2 border border-[#e63973]/20 bg-[#e63973]/5 text-[11px] text-[#e63973] tracking-wider">
+          {error}
+        </div>
+      )}
 
       {/* Grid — scrollable */}
       <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-3">

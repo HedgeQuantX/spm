@@ -12,13 +12,16 @@ const PROGRAM_ID = new PublicKey(ENV.PROGRAM_ID);
  * Account discriminators (sha256("account:<Name>")[..8])
  * Verified against live devnet data
  * ----------------------------------------------------------------*/
-const DISC_MARKET   = 'dbbed53700e3c69a';
-const DISC_BET      = '9317233b0f4b9b20';
-const DISC_PLATFORM = '4d5ccc3abb625b0c';
-const DISC_USTATS   = 'b0df881b7a4f20e3';
+const DISC_MARKET   = [0xdb, 0xbe, 0xd5, 0x37, 0x00, 0xe3, 0xc6, 0x9a];
+const DISC_BET      = [0x93, 0x17, 0x23, 0x3b, 0x0f, 0x4b, 0x9b, 0x20];
+const DISC_PLATFORM = [0x4d, 0x5c, 0xcc, 0x3a, 0xbb, 0x62, 0x5b, 0x0c];
+const DISC_USTATS   = [0xb0, 0xdf, 0x88, 0x1b, 0x7a, 0x4f, 0x20, 0xe3];
 
-function getDiscriminator(data: Buffer): string {
-  return data.subarray(0, 8).toString('hex');
+function matchDisc(data: Uint8Array, disc: number[]): boolean {
+  for (let i = 0; i < 8; i++) {
+    if (data[i] !== disc[i]) return false;
+  }
+  return true;
 }
 
 /* ------------------------------------------------------------------
@@ -47,80 +50,84 @@ function decodeSide(byte: number): Side {
 }
 
 /* ------------------------------------------------------------------
- * Borsh deserialization primitives
+ * Borsh deserialization primitives (pure Uint8Array + DataView)
+ * Works in both Node.js and browser without Buffer polyfill
  * ----------------------------------------------------------------*/
-function readString(data: Buffer, offset: number): { value: string; newOffset: number } {
-  const len = data.readUInt32LE(offset);
+function readString(dv: DataView, data: Uint8Array, offset: number): { value: string; newOffset: number } {
+  const len = dv.getUint32(offset, true);
   offset += 4;
-  const value = data.subarray(offset, offset + len).toString('utf-8');
+  const bytes = data.slice(offset, offset + len);
+  const value = new TextDecoder().decode(bytes);
   return { value, newOffset: offset + len };
 }
 
-function readU8(data: Buffer, offset: number): { value: number; newOffset: number } {
-  return { value: data.readUInt8(offset), newOffset: offset + 1 };
+function readU8(dv: DataView, offset: number): { value: number; newOffset: number } {
+  return { value: dv.getUint8(offset), newOffset: offset + 1 };
 }
 
-function readU32(data: Buffer, offset: number): { value: number; newOffset: number } {
-  return { value: data.readUInt32LE(offset), newOffset: offset + 4 };
+function readU32(dv: DataView, offset: number): { value: number; newOffset: number } {
+  return { value: dv.getUint32(offset, true), newOffset: offset + 4 };
 }
 
-function readU64(data: Buffer, offset: number): { value: number; newOffset: number } {
-  const lo = data.readUInt32LE(offset);
-  const hi = data.readUInt32LE(offset + 4);
+function readU64(dv: DataView, offset: number): { value: number; newOffset: number } {
+  const lo = dv.getUint32(offset, true);
+  const hi = dv.getUint32(offset + 4, true);
   return { value: lo + hi * 0x100000000, newOffset: offset + 8 };
 }
 
-function readI64(data: Buffer, offset: number): { value: number; newOffset: number } {
-  const value = Number(data.readBigInt64LE(offset));
-  return { value, newOffset: offset + 8 };
+function readI64(dv: DataView, offset: number): { value: number; newOffset: number } {
+  const lo = dv.getUint32(offset, true);
+  const hi = dv.getInt32(offset + 4, true);
+  return { value: lo + hi * 0x100000000, newOffset: offset + 8 };
 }
 
-function readPubkey(data: Buffer, offset: number): { value: PublicKey; newOffset: number } {
-  const bytes = data.subarray(offset, offset + 32);
+function readPubkey(data: Uint8Array, offset: number): { value: PublicKey; newOffset: number } {
+  const bytes = data.slice(offset, offset + 32);
   return { value: new PublicKey(bytes), newOffset: offset + 32 };
 }
 
-function readOptionSide(data: Buffer, offset: number): { value: Side | null; newOffset: number } {
-  const tag = data.readUInt8(offset);
+function readOptionSide(dv: DataView, offset: number): { value: Side | null; newOffset: number } {
+  const tag = dv.getUint8(offset);
   offset += 1;
   if (tag === 0) return { value: null, newOffset: offset };
-  const side = decodeSide(data.readUInt8(offset));
+  const side = decodeSide(dv.getUint8(offset));
   return { value: side, newOffset: offset + 1 };
 }
 
-function readBool(data: Buffer, offset: number): { value: boolean; newOffset: number } {
-  return { value: data.readUInt8(offset) !== 0, newOffset: offset + 1 };
+function readBool(dv: DataView, offset: number): { value: boolean; newOffset: number } {
+  return { value: dv.getUint8(offset) !== 0, newOffset: offset + 1 };
 }
 
 /* ------------------------------------------------------------------
- * Decode Market account (disc: dbbed53700e3c69a)
+ * Decode Market account
  * ----------------------------------------------------------------*/
-function decodeMarketAccount(pubkey: PublicKey, data: Buffer): Market | null {
-  if (data.length < 100 || getDiscriminator(data) !== DISC_MARKET) return null;
+function decodeMarketAccount(pubkey: PublicKey, data: Uint8Array): Market | null {
+  if (data.length < 100 || !matchDisc(data, DISC_MARKET)) return null;
   try {
+    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
     let offset = 8;
     const creator = readPubkey(data, offset); offset = creator.newOffset;
-    const marketIndex = readU64(data, offset); offset = marketIndex.newOffset;
-    const title = readString(data, offset); offset = title.newOffset;
-    const description = readString(data, offset); offset = description.newOffset;
-    const categoryByte = readU8(data, offset); offset = categoryByte.newOffset;
-    const statusByte = readU8(data, offset); offset = statusByte.newOffset;
-    const sideALabel = readString(data, offset); offset = sideALabel.newOffset;
-    const sideBLabel = readString(data, offset); offset = sideBLabel.newOffset;
-    const sideAPool = readU64(data, offset); offset = sideAPool.newOffset;
-    const sideBPool = readU64(data, offset); offset = sideBPool.newOffset;
-    const totalVolume = readU64(data, offset); offset = totalVolume.newOffset;
-    const totalBets = readU32(data, offset); offset = totalBets.newOffset;
-    const totalBettorsA = readU32(data, offset); offset = totalBettorsA.newOffset;
-    const totalBettorsB = readU32(data, offset); offset = totalBettorsB.newOffset;
-    const bounty = readU64(data, offset); offset = bounty.newOffset;
-    const createdAt = readI64(data, offset); offset = createdAt.newOffset;
-    const closesAt = readI64(data, offset); offset = closesAt.newOffset;
-    const resolvedAt = readI64(data, offset); offset = resolvedAt.newOffset;
-    const winningSide = readOptionSide(data, offset); offset = winningSide.newOffset;
-    const resolutionReason = readString(data, offset); offset = resolutionReason.newOffset;
-    const vaultBump = readU8(data, offset); offset = vaultBump.newOffset;
-    const bump = readU8(data, offset);
+    const marketIndex = readU64(dv, offset); offset = marketIndex.newOffset;
+    const title = readString(dv, data, offset); offset = title.newOffset;
+    const description = readString(dv, data, offset); offset = description.newOffset;
+    const categoryByte = readU8(dv, offset); offset = categoryByte.newOffset;
+    const statusByte = readU8(dv, offset); offset = statusByte.newOffset;
+    const sideALabel = readString(dv, data, offset); offset = sideALabel.newOffset;
+    const sideBLabel = readString(dv, data, offset); offset = sideBLabel.newOffset;
+    const sideAPool = readU64(dv, offset); offset = sideAPool.newOffset;
+    const sideBPool = readU64(dv, offset); offset = sideBPool.newOffset;
+    const totalVolume = readU64(dv, offset); offset = totalVolume.newOffset;
+    const totalBets = readU32(dv, offset); offset = totalBets.newOffset;
+    const totalBettorsA = readU32(dv, offset); offset = totalBettorsA.newOffset;
+    const totalBettorsB = readU32(dv, offset); offset = totalBettorsB.newOffset;
+    const bounty = readU64(dv, offset); offset = bounty.newOffset;
+    const createdAt = readI64(dv, offset); offset = createdAt.newOffset;
+    const closesAt = readI64(dv, offset); offset = closesAt.newOffset;
+    const resolvedAt = readI64(dv, offset); offset = resolvedAt.newOffset;
+    const winningSide = readOptionSide(dv, offset); offset = winningSide.newOffset;
+    const resolutionReason = readString(dv, data, offset); offset = resolutionReason.newOffset;
+    const vaultBump = readU8(dv, offset); offset = vaultBump.newOffset;
+    const bump = readU8(dv, offset);
 
     return {
       publicKey: pubkey,
@@ -147,27 +154,29 @@ function decodeMarketAccount(pubkey: PublicKey, data: Buffer): Market | null {
       vaultBump: vaultBump.value,
       bump: bump.value,
     };
-  } catch {
+  } catch (e) {
+    console.error('Failed to decode market:', pubkey.toBase58(), e);
     return null;
   }
 }
 
 /* ------------------------------------------------------------------
- * Decode Bet account (disc: 9317233b0f4b9b20)
+ * Decode Bet account
  * ----------------------------------------------------------------*/
-function decodeBetAccount(pubkey: PublicKey, data: Buffer): Bet | null {
-  if (data.length < 90 || getDiscriminator(data) !== DISC_BET) return null;
+function decodeBetAccount(pubkey: PublicKey, data: Uint8Array): Bet | null {
+  if (data.length < 90 || !matchDisc(data, DISC_BET)) return null;
   try {
+    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
     let offset = 8;
     const market = readPubkey(data, offset); offset = market.newOffset;
     const bettor = readPubkey(data, offset); offset = bettor.newOffset;
-    const sideByte = readU8(data, offset); offset = sideByte.newOffset;
-    const amount = readU64(data, offset); offset = amount.newOffset;
-    const oddsAtBet = readU64(data, offset); offset = oddsAtBet.newOffset;
-    const claimed = readBool(data, offset); offset = claimed.newOffset;
-    const refunded = readBool(data, offset); offset = refunded.newOffset;
-    const createdAt = readI64(data, offset); offset = createdAt.newOffset;
-    const bump = readU8(data, offset);
+    const sideByte = readU8(dv, offset); offset = sideByte.newOffset;
+    const amount = readU64(dv, offset); offset = amount.newOffset;
+    const oddsAtBet = readU64(dv, offset); offset = oddsAtBet.newOffset;
+    const claimed = readBool(dv, offset); offset = claimed.newOffset;
+    const refunded = readBool(dv, offset); offset = refunded.newOffset;
+    const createdAt = readI64(dv, offset); offset = createdAt.newOffset;
+    const bump = readU8(dv, offset);
 
     return {
       publicKey: pubkey,
@@ -181,7 +190,8 @@ function decodeBetAccount(pubkey: PublicKey, data: Buffer): Bet | null {
       createdAt: createdAt.value,
       bump: bump.value,
     };
-  } catch {
+  } catch (e) {
+    console.error('Failed to decode bet:', pubkey.toBase58(), e);
     return null;
   }
 }
@@ -189,21 +199,22 @@ function decodeBetAccount(pubkey: PublicKey, data: Buffer): Bet | null {
 /* ------------------------------------------------------------------
  * Decode Argument account
  * ----------------------------------------------------------------*/
-function decodeArgumentAccount(pubkey: PublicKey, data: Buffer): Argument | null {
+function decodeArgumentAccount(pubkey: PublicKey, data: Uint8Array): Argument | null {
   if (data.length < 110) return null;
-  const disc = getDiscriminator(data);
-  if (disc === DISC_MARKET || disc === DISC_BET || disc === DISC_PLATFORM || disc === DISC_USTATS) return null;
+  if (matchDisc(data, DISC_MARKET) || matchDisc(data, DISC_BET) ||
+      matchDisc(data, DISC_PLATFORM) || matchDisc(data, DISC_USTATS)) return null;
   try {
+    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
     let offset = 8;
     const market = readPubkey(data, offset); offset = market.newOffset;
     const bet = readPubkey(data, offset); offset = bet.newOffset;
     const author = readPubkey(data, offset); offset = author.newOffset;
-    const sideByte = readU8(data, offset); offset = sideByte.newOffset;
-    const content = readString(data, offset); offset = content.newOffset;
-    const upvotes = readU32(data, offset); offset = upvotes.newOffset;
-    const downvotes = readU32(data, offset); offset = downvotes.newOffset;
-    const createdAt = readI64(data, offset); offset = createdAt.newOffset;
-    const bump = readU8(data, offset);
+    const sideByte = readU8(dv, offset); offset = sideByte.newOffset;
+    const content = readString(dv, data, offset); offset = content.newOffset;
+    const upvotes = readU32(dv, offset); offset = upvotes.newOffset;
+    const downvotes = readU32(dv, offset); offset = downvotes.newOffset;
+    const createdAt = readI64(dv, offset); offset = createdAt.newOffset;
+    const bump = readU8(dv, offset);
 
     return {
       publicKey: pubkey,
@@ -217,27 +228,29 @@ function decodeArgumentAccount(pubkey: PublicKey, data: Buffer): Argument | null
       createdAt: createdAt.value,
       bump: bump.value,
     };
-  } catch {
+  } catch (e) {
+    console.error('Failed to decode argument:', pubkey.toBase58(), e);
     return null;
   }
 }
 
 /* ------------------------------------------------------------------
- * Decode UserStats account (disc: b0df881b7a4f20e3)
+ * Decode UserStats account
  * ----------------------------------------------------------------*/
-function decodeUserStatsAccount(pubkey: PublicKey, data: Buffer): UserStats | null {
-  if (data.length < 80 || getDiscriminator(data) !== DISC_USTATS) return null;
+function decodeUserStatsAccount(pubkey: PublicKey, data: Uint8Array): UserStats | null {
+  if (data.length < 80 || !matchDisc(data, DISC_USTATS)) return null;
   try {
+    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
     let offset = 8;
     const wallet = readPubkey(data, offset); offset = wallet.newOffset;
-    const totalBets = readU32(data, offset); offset = totalBets.newOffset;
-    const totalVolume = readU64(data, offset); offset = totalVolume.newOffset;
-    const totalWins = readU32(data, offset); offset = totalWins.newOffset;
-    const totalLosses = readU32(data, offset); offset = totalLosses.newOffset;
-    const totalPnl = readI64(data, offset); offset = totalPnl.newOffset;
-    const marketsCreated = readU32(data, offset); offset = marketsCreated.newOffset;
-    const marketsParticipated = readU32(data, offset); offset = marketsParticipated.newOffset;
-    const bump = readU8(data, offset);
+    const totalBets = readU32(dv, offset); offset = totalBets.newOffset;
+    const totalVolume = readU64(dv, offset); offset = totalVolume.newOffset;
+    const totalWins = readU32(dv, offset); offset = totalWins.newOffset;
+    const totalLosses = readU32(dv, offset); offset = totalLosses.newOffset;
+    const totalPnl = readI64(dv, offset); offset = totalPnl.newOffset;
+    const marketsCreated = readU32(dv, offset); offset = marketsCreated.newOffset;
+    const marketsParticipated = readU32(dv, offset); offset = marketsParticipated.newOffset;
+    const bump = readU8(dv, offset);
 
     return {
       publicKey: pubkey,
@@ -251,9 +264,18 @@ function decodeUserStatsAccount(pubkey: PublicKey, data: Buffer): UserStats | nu
       marketsParticipated: marketsParticipated.value,
       bump: bump.value,
     };
-  } catch {
+  } catch (e) {
+    console.error('Failed to decode user stats:', pubkey.toBase58(), e);
     return null;
   }
+}
+
+/* ------------------------------------------------------------------
+ * Convert account data to Uint8Array (handles Buffer, Uint8Array, etc.)
+ * ----------------------------------------------------------------*/
+function toUint8Array(data: Uint8Array | Buffer | number[]): Uint8Array {
+  if (data instanceof Uint8Array) return data;
+  return new Uint8Array(data);
 }
 
 /* ------------------------------------------------------------------
@@ -277,25 +299,17 @@ async function fetchAllProgramAccounts(): Promise<ProgramData> {
   const userStats: UserStats[] = [];
 
   for (const { pubkey, account } of accounts) {
-    const buf = Buffer.from(account.data);
-    const disc = getDiscriminator(buf);
+    const raw = toUint8Array(account.data as Uint8Array);
 
-    switch (disc) {
-      case DISC_MARKET: {
-        const m = decodeMarketAccount(pubkey, buf);
-        if (m) markets.push(m);
-        break;
-      }
-      case DISC_BET: {
-        const b = decodeBetAccount(pubkey, buf);
-        if (b) bets.push(b);
-        break;
-      }
-      case DISC_USTATS: {
-        const u = decodeUserStatsAccount(pubkey, buf);
-        if (u) userStats.push(u);
-        break;
-      }
+    if (matchDisc(raw, DISC_MARKET)) {
+      const m = decodeMarketAccount(pubkey, raw);
+      if (m) markets.push(m);
+    } else if (matchDisc(raw, DISC_BET)) {
+      const b = decodeBetAccount(pubkey, raw);
+      if (b) bets.push(b);
+    } else if (matchDisc(raw, DISC_USTATS)) {
+      const u = decodeUserStatsAccount(pubkey, raw);
+      if (u) userStats.push(u);
     }
   }
 
@@ -317,10 +331,10 @@ export async function fetchMarket(address: PublicKey): Promise<Market | null> {
   const connection = getConnection();
   const info = await connection.getAccountInfo(address);
   if (!info) return null;
-  return decodeMarketAccount(address, Buffer.from(info.data));
+  return decodeMarketAccount(address, toUint8Array(info.data as Uint8Array));
 }
 
-/** Fetch all bets for a given market (filtered by discriminator + market key) */
+/** Fetch all bets for a given market */
 export async function fetchMarketBets(marketAddress: PublicKey): Promise<Bet[]> {
   const connection = getConnection();
   const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
@@ -333,7 +347,7 @@ export async function fetchMarketBets(marketAddress: PublicKey): Promise<Bet[]> 
 
   const bets: Bet[] = [];
   for (const { pubkey, account } of accounts) {
-    const decoded = decodeBetAccount(pubkey, Buffer.from(account.data));
+    const decoded = decodeBetAccount(pubkey, toUint8Array(account.data as Uint8Array));
     if (decoded) bets.push(decoded);
   }
   return bets.sort((a, b) => b.createdAt - a.createdAt);
@@ -351,13 +365,13 @@ export async function fetchMarketArguments(marketAddress: PublicKey): Promise<Ar
 
   const args: Argument[] = [];
   for (const { pubkey, account } of accounts) {
-    const decoded = decodeArgumentAccount(pubkey, Buffer.from(account.data));
+    const decoded = decodeArgumentAccount(pubkey, toUint8Array(account.data as Uint8Array));
     if (decoded && decoded.market.equals(marketAddress)) args.push(decoded);
   }
   return args.sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));
 }
 
-/** Fetch all bets by a specific user (filter by bettor at offset 40) */
+/** Fetch all bets by a specific user */
 export async function fetchUserBets(wallet: PublicKey): Promise<Bet[]> {
   const connection = getConnection();
   const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
@@ -370,7 +384,7 @@ export async function fetchUserBets(wallet: PublicKey): Promise<Bet[]> {
 
   const bets: Bet[] = [];
   for (const { pubkey, account } of accounts) {
-    const decoded = decodeBetAccount(pubkey, Buffer.from(account.data));
+    const decoded = decodeBetAccount(pubkey, toUint8Array(account.data as Uint8Array));
     if (decoded) bets.push(decoded);
   }
   return bets.sort((a, b) => b.createdAt - a.createdAt);
