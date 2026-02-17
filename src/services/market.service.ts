@@ -3,9 +3,23 @@ import { getConnection } from './solana.service';
 import { ENV } from '@/config/env';
 import type { Market, Bet, Argument } from '@/types';
 import { MarketStatus, MarketCategory, Side } from '@/types';
+import type { UserStats, LeaderboardEntry } from '@/types/user';
 import { LAMPORTS_PER_SOL } from '@/config/constants';
 
 const PROGRAM_ID = new PublicKey(ENV.PROGRAM_ID);
+
+/* ------------------------------------------------------------------
+ * Account discriminators (sha256("account:<Name>")[..8])
+ * Verified against live devnet data
+ * ----------------------------------------------------------------*/
+const DISC_MARKET   = 'dbbed53700e3c69a';
+const DISC_BET      = '9317233b0f4b9b20';
+const DISC_PLATFORM = '4d5ccc3abb625b0c';
+const DISC_USTATS   = 'b0df881b7a4f20e3';
+
+function getDiscriminator(data: Buffer): string {
+  return data.subarray(0, 8).toString('hex');
+}
 
 /* ------------------------------------------------------------------
  * On-chain enum mapping
@@ -33,7 +47,7 @@ function decodeSide(byte: number): Side {
 }
 
 /* ------------------------------------------------------------------
- * Borsh-compatible string reader (4-byte LE length prefix + utf8)
+ * Borsh deserialization primitives
  * ----------------------------------------------------------------*/
 function readString(data: Buffer, offset: number): { value: string; newOffset: number } {
   const len = data.readUInt32LE(offset);
@@ -44,10 +58,6 @@ function readString(data: Buffer, offset: number): { value: string; newOffset: n
 
 function readU8(data: Buffer, offset: number): { value: number; newOffset: number } {
   return { value: data.readUInt8(offset), newOffset: offset + 1 };
-}
-
-function readU16(data: Buffer, offset: number): { value: number; newOffset: number } {
-  return { value: data.readUInt16LE(offset), newOffset: offset + 2 };
 }
 
 function readU32(data: Buffer, offset: number): { value: number; newOffset: number } {
@@ -83,12 +93,12 @@ function readBool(data: Buffer, offset: number): { value: boolean; newOffset: nu
 }
 
 /* ------------------------------------------------------------------
- * Decode Market account
+ * Decode Market account (disc: dbbed53700e3c69a)
  * ----------------------------------------------------------------*/
 function decodeMarketAccount(pubkey: PublicKey, data: Buffer): Market | null {
+  if (data.length < 100 || getDiscriminator(data) !== DISC_MARKET) return null;
   try {
-    let offset = 8; // anchor discriminator
-
+    let offset = 8;
     const creator = readPubkey(data, offset); offset = creator.newOffset;
     const marketIndex = readU64(data, offset); offset = marketIndex.newOffset;
     const title = readString(data, offset); offset = title.newOffset;
@@ -143,9 +153,10 @@ function decodeMarketAccount(pubkey: PublicKey, data: Buffer): Market | null {
 }
 
 /* ------------------------------------------------------------------
- * Decode Bet account
+ * Decode Bet account (disc: 9317233b0f4b9b20)
  * ----------------------------------------------------------------*/
 function decodeBetAccount(pubkey: PublicKey, data: Buffer): Bet | null {
+  if (data.length < 90 || getDiscriminator(data) !== DISC_BET) return null;
   try {
     let offset = 8;
     const market = readPubkey(data, offset); offset = market.newOffset;
@@ -179,6 +190,9 @@ function decodeBetAccount(pubkey: PublicKey, data: Buffer): Bet | null {
  * Decode Argument account
  * ----------------------------------------------------------------*/
 function decodeArgumentAccount(pubkey: PublicKey, data: Buffer): Argument | null {
+  if (data.length < 110) return null;
+  const disc = getDiscriminator(data);
+  if (disc === DISC_MARKET || disc === DISC_BET || disc === DISC_PLATFORM || disc === DISC_USTATS) return null;
   try {
     let offset = 8;
     const market = readPubkey(data, offset); offset = market.newOffset;
@@ -209,21 +223,92 @@ function decodeArgumentAccount(pubkey: PublicKey, data: Buffer): Argument | null
 }
 
 /* ------------------------------------------------------------------
- * Fetch helpers
+ * Decode UserStats account (disc: b0df881b7a4f20e3)
  * ----------------------------------------------------------------*/
+function decodeUserStatsAccount(pubkey: PublicKey, data: Buffer): UserStats | null {
+  if (data.length < 80 || getDiscriminator(data) !== DISC_USTATS) return null;
+  try {
+    let offset = 8;
+    const wallet = readPubkey(data, offset); offset = wallet.newOffset;
+    const totalBets = readU32(data, offset); offset = totalBets.newOffset;
+    const totalVolume = readU64(data, offset); offset = totalVolume.newOffset;
+    const totalWins = readU32(data, offset); offset = totalWins.newOffset;
+    const totalLosses = readU32(data, offset); offset = totalLosses.newOffset;
+    const totalPnl = readI64(data, offset); offset = totalPnl.newOffset;
+    const marketsCreated = readU32(data, offset); offset = marketsCreated.newOffset;
+    const marketsParticipated = readU32(data, offset); offset = marketsParticipated.newOffset;
+    const bump = readU8(data, offset);
 
-/** Fetch all Market accounts from the program */
-export async function fetchAllMarkets(): Promise<Market[]> {
+    return {
+      publicKey: pubkey,
+      wallet: wallet.value,
+      totalBets: totalBets.value,
+      totalVolume: totalVolume.value,
+      totalWins: totalWins.value,
+      totalLosses: totalLosses.value,
+      totalPnl: totalPnl.value,
+      marketsCreated: marketsCreated.value,
+      marketsParticipated: marketsParticipated.value,
+      bump: bump.value,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Fetch all accounts once, split by type
+ * Efficient: single RPC call, client-side filtering
+ * ----------------------------------------------------------------*/
+interface ProgramData {
+  markets: Market[];
+  bets: Bet[];
+  userStats: UserStats[];
+}
+
+async function fetchAllProgramAccounts(): Promise<ProgramData> {
   const connection = getConnection();
   const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
     commitment: 'confirmed',
   });
 
   const markets: Market[] = [];
+  const bets: Bet[] = [];
+  const userStats: UserStats[] = [];
+
   for (const { pubkey, account } of accounts) {
-    const decoded = decodeMarketAccount(pubkey, Buffer.from(account.data));
-    if (decoded) markets.push(decoded);
+    const buf = Buffer.from(account.data);
+    const disc = getDiscriminator(buf);
+
+    switch (disc) {
+      case DISC_MARKET: {
+        const m = decodeMarketAccount(pubkey, buf);
+        if (m) markets.push(m);
+        break;
+      }
+      case DISC_BET: {
+        const b = decodeBetAccount(pubkey, buf);
+        if (b) bets.push(b);
+        break;
+      }
+      case DISC_USTATS: {
+        const u = decodeUserStatsAccount(pubkey, buf);
+        if (u) userStats.push(u);
+        break;
+      }
+    }
   }
+
+  return { markets, bets, userStats };
+}
+
+/* ------------------------------------------------------------------
+ * Public API
+ * ----------------------------------------------------------------*/
+
+/** Fetch all Market accounts */
+export async function fetchAllMarkets(): Promise<Market[]> {
+  const { markets } = await fetchAllProgramAccounts();
   return markets;
 }
 
@@ -235,12 +320,13 @@ export async function fetchMarket(address: PublicKey): Promise<Market | null> {
   return decodeMarketAccount(address, Buffer.from(info.data));
 }
 
-/** Fetch all bets for a given market */
+/** Fetch all bets for a given market (filtered by discriminator + market key) */
 export async function fetchMarketBets(marketAddress: PublicKey): Promise<Bet[]> {
   const connection = getConnection();
   const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
     commitment: 'confirmed',
     filters: [
+      { dataSize: 100 },
       { memcmp: { offset: 8, bytes: marketAddress.toBase58() } },
     ],
   });
@@ -248,9 +334,9 @@ export async function fetchMarketBets(marketAddress: PublicKey): Promise<Bet[]> 
   const bets: Bet[] = [];
   for (const { pubkey, account } of accounts) {
     const decoded = decodeBetAccount(pubkey, Buffer.from(account.data));
-    if (decoded && decoded.market.equals(marketAddress)) bets.push(decoded);
+    if (decoded) bets.push(decoded);
   }
-  return bets;
+  return bets.sort((a, b) => b.createdAt - a.createdAt);
 }
 
 /** Fetch all arguments for a given market */
@@ -268,15 +354,16 @@ export async function fetchMarketArguments(marketAddress: PublicKey): Promise<Ar
     const decoded = decodeArgumentAccount(pubkey, Buffer.from(account.data));
     if (decoded && decoded.market.equals(marketAddress)) args.push(decoded);
   }
-  return args;
+  return args.sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));
 }
 
-/** Fetch all bets by a specific user */
+/** Fetch all bets by a specific user (filter by bettor at offset 40) */
 export async function fetchUserBets(wallet: PublicKey): Promise<Bet[]> {
   const connection = getConnection();
   const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
     commitment: 'confirmed',
     filters: [
+      { dataSize: 100 },
       { memcmp: { offset: 40, bytes: wallet.toBase58() } },
     ],
   });
@@ -284,12 +371,32 @@ export async function fetchUserBets(wallet: PublicKey): Promise<Bet[]> {
   const bets: Bet[] = [];
   for (const { pubkey, account } of accounts) {
     const decoded = decodeBetAccount(pubkey, Buffer.from(account.data));
-    if (decoded && decoded.bettor.equals(wallet)) bets.push(decoded);
+    if (decoded) bets.push(decoded);
   }
-  return bets;
+  return bets.sort((a, b) => b.createdAt - a.createdAt);
 }
 
-/** Format lamports to SOL for display */
+/** Fetch leaderboard from UserStats accounts */
+export async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
+  const { userStats } = await fetchAllProgramAccounts();
+
+  return userStats
+    .filter((u) => u.totalBets > 0)
+    .sort((a, b) => b.totalPnl - a.totalPnl)
+    .map((u, i) => ({
+      rank: i + 1,
+      wallet: u.wallet,
+      totalPnl: u.totalPnl,
+      totalVolume: u.totalVolume,
+      winRate: u.totalBets > 0
+        ? (u.totalWins / u.totalBets) * 100
+        : 0,
+      totalBets: u.totalBets,
+      totalWins: u.totalWins,
+    }));
+}
+
+/** Format lamports to SOL */
 export function lamportsToSol(lamports: number): number {
   return lamports / LAMPORTS_PER_SOL;
 }

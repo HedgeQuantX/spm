@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchLeaderboard } from '@/services/market.service';
 import { IconTrophy, IconExternalLink } from '@/components/icons';
 import { truncateAddress, formatSol } from '@/lib/format';
 import { cn } from '@/lib/cn';
@@ -15,9 +16,8 @@ export default function LeaderboardPage() {
     async function load() {
       try {
         setLoading(true);
-        // Fetch UserStats accounts from on-chain program
-        // Will be populated when program is deployed and users have stats
-        setEntries([]);
+        const data = await fetchLeaderboard();
+        setEntries(data);
       } catch {
         /* connection error */
       } finally {
@@ -83,7 +83,7 @@ export default function LeaderboardPage() {
                 {truncateAddress(entry.wallet.toBase58())}
               </span>
               <a
-                href={`https://solscan.io/account/${entry.wallet.toBase58()}`}
+                href={`https://solscan.io/account/${entry.wallet.toBase58()}?cluster=devnet`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#4a5a8a] hover:text-cyan-400 transition-colors"
