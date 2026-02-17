@@ -63,7 +63,7 @@ class WebSocketService {
 
   unsubscribe(key: string): void {
     const sub = this.subscriptions.get(key);
-    if (sub?.subscriptionId !== null && this.ws?.readyState === WebSocket.OPEN) {
+    if (sub && sub.subscriptionId !== null && this.ws?.readyState === WebSocket.OPEN) {
       const unsubMethod = sub.method.replace('Subscribe', 'Unsubscribe');
       this.sendRequest(unsubMethod, [sub.subscriptionId]);
     }
