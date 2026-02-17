@@ -1,67 +1,65 @@
 'use client';
 
 import { cn } from '@/lib/cn';
-import { truncateAddress, formatAmount, formatTimeAgo } from '@/lib/format';
+import { truncateAddress, formatSol, formatTimeAgo } from '@/lib/format';
 import { IconExternalLink } from '@/components/icons';
-import { OutcomeSide, type MarketTrade } from '@/types';
+import { Side, type Bet } from '@/types';
 
 interface TradeHistoryProps {
-  trades: MarketTrade[];
+  bets: Bet[];
 }
 
-export function TradeHistory({ trades }: TradeHistoryProps) {
-  if (trades.length === 0) {
+export function TradeHistory({ bets }: TradeHistoryProps) {
+  if (bets.length === 0) {
     return (
-      <div className="rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-5">
-        <h3 className="text-sm font-semibold text-white mb-3">Recent Trades</h3>
-        <p className="text-xs text-zinc-500 text-center py-6">No trades yet</p>
+      <div className="rounded-xl border border-cyan-400/8 bg-[#0f1628]/60 p-5">
+        <h3 className="text-sm font-bold text-white mb-3 tracking-widest">RECENT BETS</h3>
+        <p className="text-xs text-[#6b7db3] text-center py-6 tracking-wider">NO BETS YET</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-5">
-      <h3 className="text-sm font-semibold text-white mb-3">Recent Trades</h3>
+    <div className="rounded-xl border border-cyan-400/8 bg-[#0f1628]/60 p-5">
+      <h3 className="text-sm font-bold text-white mb-3 tracking-widest">RECENT BETS</h3>
       <div className="space-y-1">
         {/* Header */}
-        <div className="grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-zinc-600 px-2 py-1">
-          <span>Trader</span>
-          <span>Side</span>
-          <span className="text-right">Amount</span>
-          <span className="text-right">Time</span>
+        <div className="grid grid-cols-4 gap-2 text-[10px] tracking-[0.15em] text-[#6b7db3] px-2 py-1">
+          <span>BETTOR</span>
+          <span>SIDE</span>
+          <span className="text-right">AMOUNT</span>
+          <span className="text-right">TIME</span>
         </div>
 
         {/* Rows */}
-        {trades.map((trade) => (
+        {bets.map((bet) => (
           <div
-            key={trade.signature}
-            className="grid grid-cols-4 gap-2 text-xs px-2 py-2 rounded-lg hover:bg-zinc-800/30 transition-colors group"
+            key={bet.publicKey.toBase58()}
+            className="grid grid-cols-4 gap-2 text-xs px-2 py-2 rounded-lg hover:bg-cyan-400/5 transition-colors group"
           >
-            <span className="font-mono text-zinc-400">
-              {truncateAddress(trade.trader.toBase58())}
+            <span className="font-mono text-[#8b9ed3]">
+              {truncateAddress(bet.bettor.toBase58())}
             </span>
             <span
               className={cn(
-                'font-medium',
-                trade.side === OutcomeSide.Yes
-                  ? 'text-emerald-400'
-                  : 'text-rose-400',
+                'font-bold tracking-wider',
+                bet.side === Side.A ? 'text-cyan-400' : 'text-[#e63973]',
               )}
             >
-              {trade.side === OutcomeSide.Yes ? 'Yes' : 'No'}
+              {bet.side === Side.A ? 'SIDE A' : 'SIDE B'}
             </span>
             <span className="text-right font-mono text-white">
-              {formatAmount(trade.amount)}
+              {formatSol(bet.amount)} SOL
             </span>
             <div className="flex items-center justify-end gap-1">
-              <span className="text-zinc-500 font-mono">
-                {formatTimeAgo(trade.timestamp)}
+              <span className="text-[#6b7db3] font-mono">
+                {formatTimeAgo(bet.createdAt)}
               </span>
               <a
-                href={`https://solscan.io/tx/${trade.signature}`}
+                href={`https://solscan.io/account/${bet.publicKey.toBase58()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-white transition-all"
+                className="opacity-0 group-hover:opacity-100 text-[#6b7db3] hover:text-cyan-400 transition-all"
               >
                 <IconExternalLink size={10} />
               </a>

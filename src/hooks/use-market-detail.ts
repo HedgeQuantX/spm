@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { PublicKey } from '@solana/web3.js';
-import { fetchMarket, fetchMarketTrades } from '@/services/market.service';
+import { fetchMarket, fetchMarketBets, fetchMarketArguments } from '@/services/market.service';
 import { wsService } from '@/services/websocket.service';
-import type { Market, MarketTrade } from '@/types';
+import type { Market, Bet, Argument } from '@/types';
 
 export function useMarketDetail(address: string) {
   const [market, setMarket] = useState<Market | null>(null);
-  const [trades, setTrades] = useState<MarketTrade[]>([]);
+  const [bets, setBets] = useState<Bet[]>([]);
+  const [args, setArgs] = useState<Argument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,10 +19,7 @@ export function useMarketDetail(address: string) {
       setError(null);
 
       const pubkey = new PublicKey(address);
-      const [marketData, tradesData] = await Promise.all([
-        fetchMarket(pubkey),
-        fetchMarketTrades(pubkey),
-      ]);
+      const marketData = await fetchMarket(pubkey);
 
       if (!marketData) {
         setError('Market not found');
@@ -29,7 +27,14 @@ export function useMarketDetail(address: string) {
       }
 
       setMarket(marketData);
-      setTrades(tradesData);
+
+      const [betsData, argsData] = await Promise.all([
+        fetchMarketBets(pubkey),
+        fetchMarketArguments(pubkey),
+      ]);
+
+      setBets(betsData);
+      setArgs(argsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load market');
     } finally {
@@ -59,5 +64,5 @@ export function useMarketDetail(address: string) {
     };
   }, [address, load]);
 
-  return { market, trades, loading, error, refresh: load };
+  return { market, bets, arguments: args, loading, error, refresh: load };
 }

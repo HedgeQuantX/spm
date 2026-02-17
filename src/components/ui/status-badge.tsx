@@ -8,17 +8,18 @@ interface StatusBadgeProps {
 }
 
 const statusStyles: Record<MarketStatus, string> = {
-  [MarketStatus.Open]: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-  [MarketStatus.Closed]: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-  [MarketStatus.Resolved]: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-  [MarketStatus.Cancelled]: 'text-zinc-400 bg-zinc-400/10 border-zinc-400/20',
+  [MarketStatus.Open]: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20',
+  [MarketStatus.Closed]: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
+  [MarketStatus.Resolving]: 'text-violet-400 bg-violet-400/10 border-violet-400/20',
+  [MarketStatus.Resolved]: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20',
+  [MarketStatus.Cancelled]: 'text-[#6b7db3] bg-[#6b7db3]/10 border-[#6b7db3]/20',
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border',
+        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold tracking-wider border',
         statusStyles[status],
       )}
     >

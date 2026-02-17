@@ -1,20 +1,21 @@
 export type {
   Market,
-  MarketOutcome,
-  MarketTrade,
-  MarketPosition,
+  Bet,
+  Argument,
+  ArgumentVote,
   MarketFilter,
-  PricePoint,
 } from './market';
 
 export {
   MarketStatus,
   MarketCategory,
-  OutcomeSide,
+  Side,
+  calculateOdds,
+  totalPool,
 } from './market';
 
 export type {
-  UserProfile,
+  UserStats,
   LeaderboardEntry,
   WalletBalance,
 } from './user';

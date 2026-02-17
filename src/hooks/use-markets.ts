@@ -8,7 +8,7 @@ import type { Market, MarketFilter } from '@/types';
 import { MarketStatus } from '@/types';
 
 function applyFilters(markets: Market[], filter: MarketFilter): Market[] {
-  let result = markets;
+  let result = [...markets];
 
   if (filter.category) {
     result = result.filter((m) => m.category === filter.category);
@@ -39,12 +39,25 @@ function applyFilters(markets: Market[], filter: MarketFilter): Market[] {
         .filter((m) => m.status === MarketStatus.Open)
         .sort((a, b) => a.closesAt - b.closesAt);
       break;
-    case 'liquidity':
-      result.sort((a, b) => b.totalLiquidity - a.totalLiquidity);
+    case 'trending':
+      result.sort((a, b) => {
+        const now = Date.now() / 1000;
+        const scoreA = trendingScore(a, now);
+        const scoreB = trendingScore(b, now);
+        return scoreB - scoreA;
+      });
       break;
   }
 
   return result;
+}
+
+function trendingScore(market: Market, now: number): number {
+  const ageHours = Math.max(1, (now - market.createdAt) / 3600);
+  const recencyBoost = 1000 / ageHours;
+  const volumeScore = market.totalVolume / 1_000_000;
+  const bountyScore = market.bounty / 1_000_000;
+  return volumeScore + recencyBoost + bountyScore;
 }
 
 export function useMarkets(filter: MarketFilter) {

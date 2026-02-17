@@ -4,10 +4,9 @@ import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { cn } from '@/lib/cn';
-import { formatPercent } from '@/lib/format';
 import { IconWallet, IconArrowUp, IconArrowDown } from '@/components/icons';
 import { useWalletBalance } from '@/hooks/use-wallet-balance';
-import { OutcomeSide, type Market } from '@/types';
+import { Side, calculateOdds, type Market } from '@/types';
 
 interface TradePanelProps {
   market: Market;
@@ -17,12 +16,13 @@ export function TradePanel({ market }: TradePanelProps) {
   const { connected, publicKey } = useWallet();
   const { setVisible } = useWalletModal();
   const { sol } = useWalletBalance();
-  const [side, setSide] = useState<OutcomeSide>(OutcomeSide.Yes);
+  const [side, setSide] = useState<Side>(Side.A);
   const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const selectedOutcome = market.outcomes[side === OutcomeSide.Yes ? 0 : 1];
-  const estimatedShares = amount ? parseFloat(amount) / selectedOutcome.probability : 0;
+  const odds = calculateOdds(market);
+  const sideAPercent = (odds.sideABps / 100).toFixed(1);
+  const sideBPercent = (odds.sideBBps / 100).toFixed(1);
 
   const handleTrade = useCallback(async () => {
     if (!connected || !publicKey || !amount) return;
@@ -32,52 +32,50 @@ export function TradePanel({ market }: TradePanelProps) {
 
     setSubmitting(true);
     try {
-      // Transaction will be built and sent via the Solana program
-      // This requires the program to be deployed and the instruction
-      // to be constructed based on the program's IDL
-      console.info(`Trade: ${side} ${parsedAmount} SOL on ${market.publicKey.toBase58()}`);
+      // Transaction will be built and sent via the Anchor program
+      console.info(`Bet: side=${side} amount=${parsedAmount} SOL on market ${market.publicKey.toBase58()}`);
     } catch (err) {
-      console.error('Trade failed:', err);
+      console.error('Bet failed:', err);
     } finally {
       setSubmitting(false);
     }
   }, [connected, publicKey, amount, side, market.publicKey]);
 
   return (
-    <div className="rounded-xl border border-zinc-800/50 bg-zinc-900/30 p-5 space-y-5">
-      <h3 className="text-sm font-semibold text-white">Place Trade</h3>
+    <div className="rounded-xl border border-cyan-400/8 bg-[#0f1628]/60 p-5 space-y-5 backdrop-blur-sm">
+      <h3 className="text-sm font-bold text-white tracking-widest">PLACE BET</h3>
 
       {/* Side Selection */}
       <div className="grid grid-cols-2 gap-2">
         <button
-          onClick={() => setSide(OutcomeSide.Yes)}
+          onClick={() => setSide(Side.A)}
           className={cn(
-            'flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all',
-            side === OutcomeSide.Yes
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-              : 'bg-zinc-800/30 text-zinc-500 border border-zinc-800/50 hover:border-zinc-700',
+            'flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold tracking-wider transition-all',
+            side === Side.A
+              ? 'bg-cyan-400/15 text-cyan-400 border border-cyan-400/30'
+              : 'bg-[#0a0e1a]/50 text-[#6b7db3] border border-cyan-400/8 hover:border-cyan-400/15',
           )}
         >
           <IconArrowUp size={14} />
-          Yes {formatPercent(market.outcomes[0].probability)}
+          {market.sideALabel || 'SIDE A'} {sideAPercent}%
         </button>
         <button
-          onClick={() => setSide(OutcomeSide.No)}
+          onClick={() => setSide(Side.B)}
           className={cn(
-            'flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-all',
-            side === OutcomeSide.No
-              ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-              : 'bg-zinc-800/30 text-zinc-500 border border-zinc-800/50 hover:border-zinc-700',
+            'flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold tracking-wider transition-all',
+            side === Side.B
+              ? 'bg-[#e63973]/15 text-[#e63973] border border-[#e63973]/30'
+              : 'bg-[#0a0e1a]/50 text-[#6b7db3] border border-cyan-400/8 hover:border-[#e63973]/15',
           )}
         >
           <IconArrowDown size={14} />
-          No {formatPercent(market.outcomes[1].probability)}
+          {market.sideBLabel || 'SIDE B'} {sideBPercent}%
         </button>
       </div>
 
       {/* Amount Input */}
       <div className="space-y-2">
-        <label className="text-xs text-zinc-500">Amount (SOL)</label>
+        <label className="text-xs text-[#6b7db3] tracking-wider">AMOUNT (SOL)</label>
         <div className="relative">
           <input
             type="number"
@@ -86,26 +84,18 @@ export function TradePanel({ market }: TradePanelProps) {
             placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50 text-white font-mono text-sm focus:outline-none focus:border-zinc-600 transition-colors"
+            className="w-full px-4 py-3 rounded-lg bg-[#0a0e1a]/50 border border-cyan-400/10 text-white font-mono text-sm focus:outline-none focus:border-cyan-400/30 transition-colors"
           />
           {connected && (
             <button
               onClick={() => setAmount(Math.max(0, sol - 0.01).toFixed(4))}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 hover:text-white transition-colors uppercase tracking-wider"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#6b7db3] hover:text-cyan-400 transition-colors tracking-[0.2em]"
             >
-              Max
+              MAX
             </button>
           )}
         </div>
       </div>
-
-      {/* Estimate */}
-      {amount && parseFloat(amount) > 0 && (
-        <div className="flex justify-between text-xs text-zinc-500 font-mono">
-          <span>Est. shares</span>
-          <span className="text-white">{estimatedShares.toFixed(2)}</span>
-        </div>
-      )}
 
       {/* Action Button */}
       {connected ? (
@@ -113,22 +103,22 @@ export function TradePanel({ market }: TradePanelProps) {
           onClick={handleTrade}
           disabled={submitting || !amount || parseFloat(amount) <= 0}
           className={cn(
-            'w-full py-3 rounded-lg text-sm font-semibold transition-all',
+            'w-full py-3 rounded-lg text-sm font-bold tracking-widest transition-all',
             'disabled:opacity-40 disabled:cursor-not-allowed',
-            side === OutcomeSide.Yes
-              ? 'bg-emerald-500 hover:bg-emerald-400 text-black'
-              : 'bg-rose-500 hover:bg-rose-400 text-white',
+            side === Side.A
+              ? 'bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-[#060a14]'
+              : 'bg-gradient-to-r from-[#d6295f] to-[#e63973] hover:from-[#e63973] hover:to-[#f04d85] text-white',
           )}
         >
-          {submitting ? 'Confirming...' : `Buy ${side === OutcomeSide.Yes ? 'Yes' : 'No'}`}
+          {submitting ? 'CONFIRMING...' : `BET ON ${side === Side.A ? market.sideALabel || 'SIDE A' : market.sideBLabel || 'SIDE B'}`}
         </button>
       ) : (
         <button
           onClick={() => setVisible(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm font-semibold transition-all"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-400 hover:to-cyan-400 text-white text-sm font-bold tracking-widest transition-all"
         >
           <IconWallet size={14} />
-          Connect Wallet
+          CONNECT WALLET
         </button>
       )}
     </div>

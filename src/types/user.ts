@@ -1,14 +1,16 @@
 import { PublicKey } from '@solana/web3.js';
-import type { MarketPosition } from './market';
 
-export interface UserProfile {
+export interface UserStats {
+  publicKey: PublicKey;
   wallet: PublicKey;
+  totalBets: number;
   totalVolume: number;
+  totalWins: number;
+  totalLosses: number;
   totalPnl: number;
-  winRate: number;
-  tradesCount: number;
-  positions: MarketPosition[];
-  rank: number;
+  marketsCreated: number;
+  marketsParticipated: number;
+  bump: number;
 }
 
 export interface LeaderboardEntry {
@@ -17,10 +19,10 @@ export interface LeaderboardEntry {
   totalPnl: number;
   totalVolume: number;
   winRate: number;
-  tradesCount: number;
+  totalBets: number;
+  totalWins: number;
 }
 
 export interface WalletBalance {
   sol: number;
-  usdc: number;
 }

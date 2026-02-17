@@ -1,28 +1,29 @@
 import { cn } from '@/lib/cn';
-import { formatPercent } from '@/lib/format';
 
 interface ProbabilityBarProps {
-  yesPercent: number;
+  sideAPercent: number;
+  sideALabel: string;
+  sideBLabel: string;
   className?: string;
 }
 
-export function ProbabilityBar({ yesPercent, className }: ProbabilityBarProps) {
-  const noPercent = 1 - yesPercent;
+export function ProbabilityBar({ sideAPercent, sideALabel, sideBLabel, className }: ProbabilityBarProps) {
+  const sideBPercent = 100 - sideAPercent;
 
   return (
     <div className={cn('space-y-2', className)}>
-      <div className="flex justify-between text-xs font-mono">
-        <span className="text-emerald-400">Yes {formatPercent(yesPercent)}</span>
-        <span className="text-rose-400">No {formatPercent(noPercent)}</span>
+      <div className="flex justify-between text-xs font-mono tracking-wider">
+        <span className="text-cyan-400">{sideALabel} {sideAPercent.toFixed(1)}%</span>
+        <span className="text-[#e63973]">{sideBLabel} {sideBPercent.toFixed(1)}%</span>
       </div>
-      <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden flex">
+      <div className="h-1.5 rounded-full bg-[#0f1628] overflow-hidden flex">
         <div
-          className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500 ease-out"
-          style={{ width: `${yesPercent * 100}%` }}
+          className="h-full bg-gradient-to-r from-cyan-500 to-cyan-400 transition-all duration-500 ease-out"
+          style={{ width: `${sideAPercent}%` }}
         />
         <div
-          className="h-full bg-gradient-to-r from-rose-400 to-rose-500 transition-all duration-500 ease-out"
-          style={{ width: `${noPercent * 100}%` }}
+          className="h-full bg-gradient-to-r from-[#d6295f] to-[#e63973] transition-all duration-500 ease-out"
+          style={{ width: `${sideBPercent}%` }}
         />
       </div>
     </div>

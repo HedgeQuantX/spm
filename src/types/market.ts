@@ -3,6 +3,7 @@ import { PublicKey } from '@solana/web3.js';
 export enum MarketStatus {
   Open = 'open',
   Closed = 'closed',
+  Resolving = 'resolving',
   Resolved = 'resolved',
   Cancelled = 'cancelled',
 }
@@ -17,66 +18,87 @@ export enum MarketCategory {
   Other = 'other',
 }
 
-export enum OutcomeSide {
-  Yes = 'yes',
-  No = 'no',
-}
-
-export interface MarketOutcome {
-  side: OutcomeSide;
-  label: string;
-  probability: number;
-  totalStake: number;
-  tokenMint: PublicKey | null;
+export enum Side {
+  A = 'a',
+  B = 'b',
 }
 
 export interface Market {
   publicKey: PublicKey;
-  authority: PublicKey;
+  creator: PublicKey;
+  marketIndex: number;
   title: string;
   description: string;
   category: MarketCategory;
   status: MarketStatus;
-  outcomes: [MarketOutcome, MarketOutcome];
+  sideALabel: string;
+  sideBLabel: string;
+  sideAPool: number;
+  sideBPool: number;
   totalVolume: number;
-  totalLiquidity: number;
+  totalBets: number;
+  totalBettorsA: number;
+  totalBettorsB: number;
+  bounty: number;
   createdAt: number;
   closesAt: number;
-  resolvedAt: number | null;
-  resolvedOutcome: OutcomeSide | null;
-  imageUrl: string | null;
+  resolvedAt: number;
+  winningSide: Side | null;
+  resolutionReason: string;
+  vaultBump: number;
+  bump: number;
 }
 
-export interface MarketTrade {
-  signature: string;
+export interface Bet {
+  publicKey: PublicKey;
   market: PublicKey;
-  trader: PublicKey;
-  side: OutcomeSide;
+  bettor: PublicKey;
+  side: Side;
   amount: number;
-  price: number;
-  timestamp: number;
+  oddsAtBet: number;
+  claimed: boolean;
+  refunded: boolean;
+  createdAt: number;
+  bump: number;
 }
 
-export interface MarketPosition {
+export interface Argument {
+  publicKey: PublicKey;
   market: PublicKey;
-  side: OutcomeSide;
-  shares: number;
-  avgPrice: number;
-  currentPrice: number;
-  pnl: number;
-  pnlPercent: number;
+  bet: PublicKey;
+  author: PublicKey;
+  side: Side;
+  content: string;
+  upvotes: number;
+  downvotes: number;
+  createdAt: number;
+  bump: number;
+}
+
+export interface ArgumentVote {
+  publicKey: PublicKey;
+  argument: PublicKey;
+  voter: PublicKey;
+  isUpvote: boolean;
+  bump: number;
 }
 
 export interface MarketFilter {
   category: MarketCategory | null;
   status: MarketStatus | null;
   search: string;
-  sortBy: 'volume' | 'newest' | 'closing' | 'liquidity';
+  sortBy: 'volume' | 'newest' | 'closing' | 'trending';
 }
 
-export interface PricePoint {
-  timestamp: number;
-  yesPrice: number;
-  noPrice: number;
-  volume: number;
+/** Derived odds from pool ratios (in basis points, 10000 = 100%) */
+export function calculateOdds(market: Market): { sideABps: number; sideBBps: number } {
+  const total = market.sideAPool + market.sideBPool;
+  if (total === 0) return { sideABps: 5000, sideBBps: 5000 };
+  const aBps = Math.round((market.sideAPool / total) * 10000);
+  return { sideABps: aBps, sideBBps: 10000 - aBps };
+}
+
+/** Total pool including bounty */
+export function totalPool(market: Market): number {
+  return market.sideAPool + market.sideBPool + market.bounty;
 }

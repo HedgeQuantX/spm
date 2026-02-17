@@ -23,9 +23,9 @@ export function MarketGrid({ markets, loading }: MarketGridProps) {
   if (markets.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-zinc-500 text-sm">No markets found</p>
-        <p className="text-zinc-600 text-xs mt-1">
-          Try adjusting your filters or check back later
+        <p className="text-[#6b7db3] text-sm tracking-wider">NO MARKETS FOUND</p>
+        <p className="text-[#4a5a8a] text-xs mt-1 tracking-wider">
+          TRY ADJUSTING YOUR FILTERS OR CHECK BACK LATER
         </p>
       </div>
     );

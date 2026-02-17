@@ -23,25 +23,25 @@ export function MarketFilters({ filter, onChange, totalCount }: MarketFiltersPro
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Search */}
         <div className="relative flex-1">
-          <IconSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <IconSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7db3]" />
           <input
             type="text"
-            placeholder="Search markets..."
+            placeholder="SEARCH MARKETS..."
             value={filter.search}
             onChange={(e) => onChange({ ...filter, search: e.target.value })}
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-zinc-900/50 border border-zinc-800/50 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-[#0f1628]/80 border border-cyan-400/10 text-sm text-white placeholder:text-[#4a5a8a] focus:outline-none focus:border-cyan-400/30 transition-colors tracking-wider"
           />
         </div>
 
         {/* Sort */}
         <div className="relative">
-          <IconFilter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <IconFilter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b7db3]" />
           <select
             value={filter.sortBy}
             onChange={(e) =>
               onChange({ ...filter, sortBy: e.target.value as MarketFilter['sortBy'] })
             }
-            className="appearance-none pl-9 pr-8 py-2.5 rounded-lg bg-zinc-900/50 border border-zinc-800/50 text-sm text-white focus:outline-none focus:border-zinc-600 transition-colors cursor-pointer"
+            className="appearance-none pl-9 pr-8 py-2.5 rounded-lg bg-[#0f1628]/80 border border-cyan-400/10 text-sm text-white focus:outline-none focus:border-cyan-400/30 transition-colors cursor-pointer tracking-wider"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -57,13 +57,13 @@ export function MarketFilters({ filter, onChange, totalCount }: MarketFiltersPro
         <button
           onClick={() => onChange({ ...filter, category: null })}
           className={cn(
-            'px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all',
+            'px-3 py-1.5 rounded-lg text-xs font-semibold tracking-[0.15em] whitespace-nowrap transition-all',
             !filter.category
-              ? 'bg-white text-black'
-              : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50',
+              ? 'bg-cyan-400 text-[#060a14]'
+              : 'text-[#6b7db3] hover:text-cyan-400 hover:bg-cyan-400/5',
           )}
         >
-          All ({totalCount})
+          ALL ({totalCount})
         </button>
         {categories.map((cat) => (
           <button
@@ -75,10 +75,10 @@ export function MarketFilters({ filter, onChange, totalCount }: MarketFiltersPro
               })
             }
             className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all',
+              'px-3 py-1.5 rounded-lg text-xs font-semibold tracking-[0.15em] whitespace-nowrap transition-all',
               filter.category === cat
-                ? 'bg-white text-black'
-                : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50',
+                ? 'bg-cyan-400 text-[#060a14]'
+                : 'text-[#6b7db3] hover:text-cyan-400 hover:bg-cyan-400/5',
             )}
           >
             {MARKET_CATEGORIES_LABELS[cat]}
