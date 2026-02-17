@@ -21,7 +21,7 @@ interface MarketDetailPanelProps {
 
 export function MarketDetailPanel({ market, onClose }: MarketDetailPanelProps) {
   const address = market.publicKey.toBase58();
-  const { market: liveMarket, bets, loading } = useMarketDetail(address);
+  const { market: liveMarket, bets, loading, refresh } = useMarketDetail(address);
 
   const displayMarket = liveMarket || market;
   const odds = calculateOdds(displayMarket);
@@ -105,7 +105,7 @@ export function MarketDetailPanel({ market, onClose }: MarketDetailPanelProps) {
               <MarketStats market={displayMarket} />
 
               {/* Trade Panel */}
-              <TradePanel market={displayMarket} />
+              <TradePanel market={displayMarket} onBetPlaced={refresh} />
 
               {/* Trade History */}
               <TradeHistory bets={bets} />

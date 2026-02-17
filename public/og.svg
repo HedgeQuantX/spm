@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0a0e1a"/>
+  
+  <!-- Grid pattern -->
+  <defs>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#162040" stroke-width="0.5"/>
+    </pattern>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.08"/>
+      <stop offset="50%" stop-color="#8b5cf6" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#e63973" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  
+  <!-- Glow circles -->
+  <circle cx="300" cy="315" r="250" fill="#22d3ee" fill-opacity="0.03"/>
+  <circle cx="900" cy="315" r="250" fill="#8b5cf6" fill-opacity="0.03"/>
+  
+  <!-- Border -->
+  <rect x="20" y="20" width="1160" height="590" rx="8" stroke="#22d3ee" stroke-width="1" stroke-opacity="0.15" fill="none"/>
+  
+  <!-- Corner accents -->
+  <path d="M20 40V20H40" stroke="#22d3ee" stroke-width="2" stroke-opacity="0.5"/>
+  <path d="M1160 20H1180V40" stroke="#22d3ee" stroke-width="2" stroke-opacity="0.5"/>
+  <path d="M20 590V610H40" stroke="#a78bfa" stroke-width="2" stroke-opacity="0.5"/>
+  <path d="M1160 610H1180V590" stroke="#a78bfa" stroke-width="2" stroke-opacity="0.5"/>
+  
+  <!-- Solana icon -->
+  <g transform="translate(505, 160)">
+    <circle cx="30" cy="30" r="28" stroke="#22d3ee" stroke-width="1.5" fill="#22d3ee" fill-opacity="0.08"/>
+    <path d="M18 37L28 22L38 37H18Z" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M23 33L28 25L33 33H23Z" fill="#22d3ee" fill-opacity="0.3"/>
+  </g>
+  <g transform="translate(625, 160)">
+    <circle cx="30" cy="30" r="28" stroke="#a78bfa" stroke-width="1.5" fill="#a78bfa" fill-opacity="0.08"/>
+    <path d="M20 30C20 24 24 20 30 20C36 20 40 24 40 30C40 36 36 40 30 40C24 40 20 36 20 30Z" fill="none" stroke="#a78bfa" stroke-width="2"/>
+    <path d="M30 22V38M22 30H38" stroke="#a78bfa" stroke-width="1.5"/>
+  </g>
+  
+  <!-- SPM Title -->
+  <text x="600" y="300" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="800" font-size="90" letter-spacing="0.15em" fill="white">SPM</text>
+  
+  <!-- Subtitle -->
+  <text x="600" y="355" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="600" font-size="24" letter-spacing="0.25em" fill="#6b7db3">SOLANA PREDICTION MARKETS</text>
+  
+  <!-- Tagline -->
+  <text x="600" y="410" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="500" font-size="18" letter-spacing="0.15em" fill="#4a5a8a">FULLY ON-CHAIN  /  PERMISSIONLESS  /  REAL-TIME</text>
+  
+  <!-- Stats bar -->
+  <g transform="translate(250, 460)">
+    <rect width="180" height="60" rx="4" fill="#0f1628" stroke="#22d3ee" stroke-width="0.5" stroke-opacity="0.2"/>
+    <text x="90" y="28" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="600" font-size="11" letter-spacing="0.2em" fill="#6b7db3">MARKETS</text>
+    <text x="90" y="48" text-anchor="middle" font-family="monospace" font-weight="700" font-size="18" fill="#22d3ee">83+</text>
+  </g>
+  <g transform="translate(510, 460)">
+    <rect width="180" height="60" rx="4" fill="#0f1628" stroke="#a78bfa" stroke-width="0.5" stroke-opacity="0.2"/>
+    <text x="90" y="28" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="600" font-size="11" letter-spacing="0.2em" fill="#6b7db3">ON-CHAIN</text>
+    <text x="90" y="48" text-anchor="middle" font-family="monospace" font-weight="700" font-size="18" fill="#a78bfa">100%</text>
+  </g>
+  <g transform="translate(770, 460)">
+    <rect width="180" height="60" rx="4" fill="#0f1628" stroke="#e63973" stroke-width="0.5" stroke-opacity="0.2"/>
+    <text x="90" y="28" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="600" font-size="11" letter-spacing="0.2em" fill="#6b7db3">NETWORK</text>
+    <text x="90" y="48" text-anchor="middle" font-family="monospace" font-weight="700" font-size="18" fill="#e63973">SOLANA</text>
+  </g>
+  
+  <!-- URL -->
+  <text x="600" y="570" text-anchor="middle" font-family="monospace" font-weight="600" font-size="14" letter-spacing="0.1em" fill="#22d3ee" fill-opacity="0.6">SPM.HEDGEQUANTX.COM</text>
+</svg>
