@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
 import { WalletProvider } from '@/components/layout/wallet-provider';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -27,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -34,11 +33,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-sans antialiased min-h-screen flex flex-col">
+      <body className="font-sans antialiased">
         <WalletProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          {children}
         </WalletProvider>
       </body>
     </html>

@@ -1,54 +1,42 @@
 'use client';
 
 import { useState } from 'react';
-import { useMarkets } from '@/hooks/use-markets';
-import { MarketFilters } from '@/components/market/market-filters';
-import { MarketGrid } from '@/components/market/market-grid';
-import { IconTrending } from '@/components/icons';
-import type { MarketFilter } from '@/types';
-
-const DEFAULT_FILTER: MarketFilter = {
-  category: null,
-  status: null,
-  search: '',
-  sortBy: 'volume',
-};
+import { Header, type Tab } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
+import { MarketsSection } from '@/components/sections/markets-section';
+import { LeaderboardSection } from '@/components/sections/leaderboard-section';
+import { PortfolioSection } from '@/components/sections/portfolio-section';
+import { MarketDetailPanel } from '@/components/market/market-detail-panel';
+import type { Market } from '@/types';
 
 export default function HomePage() {
-  const [filter, setFilter] = useState<MarketFilter>(DEFAULT_FILTER);
-  const { markets, allMarkets, loading, error } = useMarkets(filter);
+  const [activeTab, setActiveTab] = useState<Tab>('markets');
+  const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      {/* Hero */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <IconTrending size={24} className="text-cyan-400" />
-          <h1 className="text-2xl font-bold text-white tracking-widest">PREDICTION MARKETS</h1>
-        </div>
-        <p className="text-sm text-[#6b7db3] tracking-wider">
-          TRADE PREDICTIONS ON REAL-WORLD EVENTS, FULLY ON-CHAIN ON SOLANA.
-        </p>
-      </div>
+    <div id="app-shell" className="h-screen w-screen flex flex-col overflow-hidden relative">
+      {/* Header — fixed height */}
+      <Header activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* Error State */}
-      {error && (
-        <div className="mb-6 p-4 rounded-lg bg-[#e63973]/10 border border-[#e63973]/20 text-[#e63973] text-sm tracking-wider">
-          {error}
-        </div>
-      )}
+      {/* Main Content — fills remaining space */}
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        {activeTab === 'markets' && (
+          <MarketsSection onSelectMarket={setSelectedMarket} />
+        )}
+        {activeTab === 'leaderboard' && <LeaderboardSection />}
+        {activeTab === 'portfolio' && <PortfolioSection />}
+      </main>
 
-      {/* Filters */}
-      <div className="mb-6">
-        <MarketFilters
-          filter={filter}
-          onChange={setFilter}
-          totalCount={allMarkets.length}
+      {/* Footer — fixed height, desktop only */}
+      <Footer />
+
+      {/* Market Detail Slide-Over */}
+      {selectedMarket && (
+        <MarketDetailPanel
+          market={selectedMarket}
+          onClose={() => setSelectedMarket(null)}
         />
-      </div>
-
-      {/* Grid */}
-      <MarketGrid markets={markets} loading={loading} />
+      )}
     </div>
   );
 }
