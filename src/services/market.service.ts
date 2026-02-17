@@ -4,6 +4,10 @@ import { ENV } from '@/config/env';
 import type { Market, MarketTrade } from '@/types';
 import { MarketStatus, MarketCategory, OutcomeSide } from '@/types';
 
+function hasProgramId(): boolean {
+  return ENV.PROGRAM_ID.length > 0;
+}
+
 function parseProgramId(): PublicKey {
   return new PublicKey(ENV.PROGRAM_ID);
 }
@@ -98,6 +102,8 @@ function decodeMarketAccount(pubkey: PublicKey, data: Buffer): Market {
 }
 
 export async function fetchAllMarkets(): Promise<Market[]> {
+  if (!hasProgramId()) return [];
+
   const connection = getConnection();
   const programId = parseProgramId();
 

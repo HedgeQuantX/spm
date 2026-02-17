@@ -19,8 +19,6 @@ import {
   IconSolana,
   IconChevronDown,
   IconDisconnect,
-  IconTwitter,
-  IconTelegram,
 } from '@/components/icons';
 
 const NAV_LINKS = [
@@ -43,24 +41,13 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo + Social */}
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <IconSolana size={24} className="transition-transform group-hover:scale-110" />
-              <span className="text-lg font-bold tracking-tight text-white">
-                SPM
-              </span>
-            </Link>
-
-            <div className="hidden sm:flex items-center gap-1.5 ml-2">
-              <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="p-1.5 text-zinc-500 hover:text-white transition-colors">
-                <IconTwitter size={14} />
-              </a>
-              <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="p-1.5 text-zinc-500 hover:text-white transition-colors">
-                <IconTelegram size={14} />
-              </a>
-            </div>
-          </div>
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <IconSolana size={24} className="transition-transform group-hover:scale-110" />
+            <span className="text-lg font-bold tracking-tight text-white">
+              SPM
+            </span>
+          </Link>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-1">
