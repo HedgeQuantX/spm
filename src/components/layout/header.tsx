@@ -66,7 +66,7 @@ export function Header() {
             {/* Live Indicator */}
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#6b7db3]">
               <IconDot size={8} className="text-cyan-400 animate-pulse-dot" />
-              <span className="font-mono tracking-wider">MAINNET</span>
+              <span className="font-mono tracking-wider">DEVNET</span>
             </div>
 
             {/* Wallet */}
